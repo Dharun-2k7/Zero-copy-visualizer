@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zero-Copy Architecture — Cinematic Visualizer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600;700&family=Orbitron:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Ambient background layers -->
+  <div class="grid-bg" aria-hidden="true"></div>
+  <div class="scanline" aria-hidden="true"></div>
+  <canvas id="particleCanvas" aria-hidden="true"></canvas>
+
+  <div class="container">
+
+    <!-- ── HEADER ─────────────────────────────────────────── -->
+    <header class="site-header">
+      <div class="header-glow" aria-hidden="true"></div>
+      <p class="header-eyebrow">Low-Latency Systems Engineering</p>
+      <h1>ZERO-COPY<br><span class="h1-accent">PROTOCOL</span></h1>
+      <p class="header-sub">Cinematic Step-by-Step Architecture Visualization</p>
+      <div class="header-tags">
+        <span class="tag">C++17</span>
+        <span class="tag">mmap()</span>
+        <span class="tag">string_view</span>
+        <span class="tag">HFT Systems</span>
+      </div>
+    </header>
+
+    <!-- ── CONTROL PANEL ──────────────────────────────────── -->
+    <section class="control-panel" aria-label="Visualization Controls">
+
+      <div class="mode-grid">
+
+        <button class="mode-card active" data-mode="traditional" aria-pressed="true">
+          <div class="mode-card-inner">
+            <div class="mode-icon-wrap">
+              <span class="mode-icon">📋</span>
+              <div class="mode-icon-ring"></div>
+            </div>
+            <div class="mode-info">
+              <h3 class="mode-title">Traditional I/O</h3>
+              <p class="mode-desc">Three full memory copies across kernel &amp; user boundaries</p>
+              <ul class="mode-stats">
+                <li><span class="stat-dot bad"></span>3 copies</li>
+                <li><span class="stat-dot bad"></span>1000 CPU cycles</li>
+                <li><span class="stat-dot bad"></span>75% cache hit</li>
+              </ul>
+            </div>
+          </div>
+        </button>
+
+        <button class="mode-card" data-mode="mmap" aria-pressed="false">
+          <div class="mode-card-inner">
+            <div class="mode-icon-wrap">
+              <span class="mode-icon">🗺️</span>
+              <div class="mode-icon-ring"></div>
+            </div>
+            <div class="mode-info">
+              <h3 class="mode-title">mmap() Zero-Copy</h3>
+              <p class="mode-desc">Shared physical pages mapped into user address space</p>
+              <ul class="mode-stats">
+                <li><span class="stat-dot ok"></span>1 copy</li>
+                <li><span class="stat-dot ok"></span>300 CPU cycles</li>
+                <li><span class="stat-dot ok"></span>25% cache hit</li>
+              </ul>
+            </div>
+          </div>
+        </button>
+
+        <button class="mode-card" data-mode="stringview" aria-pressed="false">
+          <div class="mode-card-inner">
+            <div class="mode-icon-wrap">
+              <span class="mode-icon">👁️</span>
+              <div class="mode-icon-ring"></div>
+            </div>
+            <div class="mode-info">
+              <h3 class="mode-title">std::string_view</h3>
+              <p class="mode-desc">Non-owning pointer+length references, zero allocation</p>
+              <ul class="mode-stats">
+                <li><span class="stat-dot best"></span>0 copies</li>
+                <li><span class="stat-dot best"></span>50 CPU cycles</li>
+                <li><span class="stat-dot best"></span>5% cache hit</li>
+              </ul>
+            </div>
+          </div>
+        </button>
+
+      </div><!-- /.mode-grid -->
+
+      <div class="action-row">
+        <button id="playBtn" class="play-btn">
+          <span class="play-btn-bg"></span>
+          <span class="play-btn-label">▶ &nbsp;EXECUTE ANIMATION</span>
+        </button>
+
+        <div class="speed-wrap">
+          <label for="speedRange" class="speed-label">SPEED</label>
+          <input type="range" id="speedRange" min="0.5" max="3" step="0.1" value="1" />
+          <span id="speedDisplay" class="speed-display">1.0×</span>
+        </div>
+      </div>
+
+    </section><!-- /.control-panel -->
+
+    <!-- ── METRICS DASHBOARD ──────────────────────────────── -->
+    <div class="metrics-grid" aria-live="polite" aria-label="Performance Metrics">
+
+      <div class="metric-card" style="--mc:#ff006e;--mc2:#ff4d94">
+        <div class="metric-bg-shape"></div>
+        <div class="metric-icon-row">
+          <span class="metric-icon">⎘</span>
+          <span class="metric-label">MEMORY COPIES</span>
+        </div>
+        <div class="metric-value" id="mCopies">0</div>
+        <div class="metric-bar"><div class="metric-bar-fill" id="mCopiesBar" style="width:0%"></div></div>
+      </div>
+
+      <div class="metric-card" style="--mc:#00f0ff;--mc2:#66f7ff">
+        <div class="metric-bg-shape"></div>
+        <div class="metric-icon-row">
+          <span class="metric-icon">⚙</span>
+          <span class="metric-label">CPU CYCLES</span>
+        </div>
+        <div class="metric-value" id="mCPU">0</div>
+        <div class="metric-bar"><div class="metric-bar-fill" id="mCPUBar" style="width:0%"></div></div>
+      </div>
+
+      <div class="metric-card" style="--mc:#ffbe0b;--mc2:#ffd60a">
+        <div class="metric-bg-shape"></div>
+        <div class="metric-icon-row">
+          <span class="metric-icon">▦</span>
+          <span class="metric-label">MEMORY USED</span>
+        </div>
+        <div class="metric-value" id="mMem">0 KB</div>
+        <div class="metric-bar"><div class="metric-bar-fill" id="mMemBar" style="width:0%"></div></div>
+      </div>
+
+      <div class="metric-card" style="--mc:#00ff88;--mc2:#66ffb3">
+        <div class="metric-bg-shape"></div>
+        <div class="metric-icon-row">
+          <span class="metric-icon">◈</span>
+          <span class="metric-label">CACHE POLLUTION</span>
+        </div>
+        <div class="metric-value" id="mCache">0%</div>
+        <div class="metric-bar"><div class="metric-bar-fill" id="mCacheBar" style="width:0%"></div></div>
+      </div>
+
+    </div><!-- /.metrics-grid -->
+
+    <!-- ── STAGE ──────────────────────────────────────────── -->
+    <main class="stage" aria-label="Visualization Stage">
+
+      <!-- Narrator bar -->
+      <div class="narrator" id="narrator">
+        <div class="narrator-sweep" aria-hidden="true"></div>
+        <div class="narrator-step-badge" id="narratorBadge">READY</div>
+        <h2 class="narrator-title" id="narratorTitle">Select a mode &amp; press Execute</h2>
+        <p class="narrator-desc" id="narratorDesc">Choose Traditional I/O, mmap(), or string_view above, then click the button to watch the full animation chain.</p>
+      </div>
+
+      <!-- Timeline -->
+      <div class="timeline-wrap">
+        <div class="timeline-track">
+          <div class="timeline-fill" id="timelineFill"></div>
+        </div>
+        <div class="timeline-dots" id="timelineDots"></div>
+      </div>
+
+      <!-- Dynamic architecture layers injected here by JS -->
+      <div class="layer-stack" id="layerStack"></div>
+
+    </main><!-- /.stage -->
+
+    <!-- ── EXPLANATION PANEL ───────────────────────────────── -->
+    <section class="explanation-panel" id="explanationPanel" aria-label="Technical Explanation">
+      <div class="exp-placeholder">
+        <p class="exp-ph-text">▸ Run an animation to load the technical deep-dive.</p>
+      </div>
+    </section>
+
+  </div><!-- /.container -->
+
+  <script src="script.js"></script>
+</body>
+</html>
